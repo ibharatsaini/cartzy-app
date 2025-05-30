@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { productRoutes } from './routes/product.routes';
+import { errorHandler } from './middleware/errorHandler';
 
 
 dotenv.config()
@@ -17,8 +19,9 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use('/api/products', productRoutes);
 
-
+app.use(errorHandler)
 
 
 app.get('/health', (req, res) => {
