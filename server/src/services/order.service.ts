@@ -1,0 +1,163 @@
+import { OrderStatus, Prisma } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
+import prisma from './prismaClient';
+import { CreateOrderDTO, PaymentDetails } from '../types';
+import { AppError } from '../middleware/errorHandler';
+import { NextFunction } from 'express';
+
+const generateOrderNumber = () => {
+  const timestamp = new Date().getTime().toString().slice(-6);
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `ORD-${timestamp}-${random}`;
+};
+
+const processPayment = async (total: number, payment: PaymentDetails) => {
+
+  return {
+    success: true,
+    lastFour: payment.cardNumber.slice(-4)
+  };
+};
+
+const validateOrderItems = async (items: CreateOrderDTO['items']) => {
+  const validatedItems = await Promise.all(
+    items.map(async (item) => {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        include: {
+          variants: {
+            where: { id: item.variantId }
+          }
+        }
+      });
+
+      if (!product) {
+        throw new AppError(404, `Product not found: ${item.productId}`, 'PRODUCT_NOT_FOUND');
+      }
+
+      const variant = product.variants[0];
+      if (!variant) {
+        throw new AppError(404, `Variant not found: ${item.variantId}`, 'VARIANT_NOT_FOUND');
+      }
+
+      return {
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        price: variant.price
+      };
+    })
+  );
+
+  return validatedItems;
+};
+
+const calculateOrderTotals = (items: Array<{ price: number; quantity: number }>) => {
+  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const tax = subtotal * 0.08;
+  const shipping = subtotal > 100 ? 0 : 15.99;
+  const total = subtotal + tax + shipping;
+
+  return { subtotal, tax, shipping, total };
+};
+
+export const orderService = {
+  async createOrder(orderData: CreateOrderDTO, next: NextFunction) {
+    const { customer, payment, items } = orderData;
+
+    try {
+      // Validate order items and get correct prices
+      const validatedItems = await validateOrderItems(items);
+
+      // Calculate totals
+      const { subtotal, tax, shipping, total } = calculateOrderTotals(validatedItems);
+
+      // Process payment
+      const paymentResult = await processPayment(total, payment);
+
+      // Create customer
+      const customerRecord = await prisma.customer.create({
+        data: customer
+      });
+
+      // Create order with basic info
+      const order = await prisma.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          status: OrderStatus.APPROVED,
+          customerId: customerRecord.id,
+        }
+      });
+
+      // Create order items
+      await prisma.orderItem.createMany({
+        data: validatedItems.map(item => ({
+          orderId: order.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      });
+
+      // Create payment record
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          total,
+          subtotal,
+          tax,
+          shipping,
+          lastFour: paymentResult.lastFour
+        }
+      });
+
+      // Fetch complete order with all relations
+      const completeOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: {
+          customer: true,
+          items: {
+            include: {
+              product: true,
+              variant: true
+            }
+          },
+          payment: true
+        }
+      });
+
+      if (!completeOrder) {
+        throw new AppError(500, 'Failed to fetch complete order', 'ORDER_ERROR');
+      }
+
+
+
+      return completeOrder;
+    } catch (error) {
+      // If any step fails, throw the error to be handled by the error middleware
+      throw error;
+    }
+  },
+
+  async getOrderById(orderId: string) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: true,
+            variant: true
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      throw new AppError(404, 'Order not found', 'ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+};
