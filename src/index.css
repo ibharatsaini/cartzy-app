@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    @apply text-gray-900 bg-gray-50;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Better focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-white;
+  }
+  
+  /* Input placeholders */
+  ::placeholder {
+    @apply text-gray-400;
+  }
+  
+  /* Improve text rendering */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-gray-900;
+  }
+}
+
+@layer components {
+  /* Custom transitions */
+  .transition-fast {
+    @apply transition duration-150 ease-in-out;
+  }
+  
+  .transition-medium {
+    @apply transition duration-300 ease-in-out;
+  }
+  
+  /* Page transitions */
+  .page-enter {
+    @apply opacity-0;
+  }
+  
+  .page-enter-active {
+    @apply opacity-100 transition-opacity duration-300;
+  }
+  
+  .page-exit {
+    @apply opacity-100;
+  }
+  
+  .page-exit-active {
+    @apply opacity-0 transition-opacity duration-300;
+  }
+}
