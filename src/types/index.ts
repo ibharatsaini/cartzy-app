@@ -57,6 +57,15 @@ export interface Order {
   createdAt: string;
 }
 
+// API Response Types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
 
 // Transaction Types
 export type TransactionOutcome = 1 | 2 | 3; // 1-Approved, 2-Declined, 3-Gateway Error
