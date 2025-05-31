@@ -57,6 +57,12 @@ export interface Order {
   createdAt: string;
 }
 
+
+export interface SelectedVariant {
+    image: string
+    price: number
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;
