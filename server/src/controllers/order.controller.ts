@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { orderService } from "../services/order.service";
 import { AppError } from "../middleware/errorHandler";
+import { decryptData } from "../utils/crypto";
 
 const customerSchema = z.object({
   fullName: z.string().min(3),
@@ -28,7 +29,8 @@ const orderItemSchema = z.object({
 
 const createOrderSchema = z.object({
   customer: customerSchema,
-  payment: paymentSchema,
+  // payment: paymentSchema,
+  payment: z.string(),
   items: z.array(orderItemSchema).min(1),
 });
 
@@ -36,9 +38,18 @@ export const orderController = {
   async createOrder(req: Request, res: Response, next: NextFunction) {
     try {
       console.log(req.body);
-      const validatedData = createOrderSchema.parse(req.body);
-      console.log(validatedData);
-      const order = await orderService.createOrder(validatedData, next);
+      const {
+        customer,
+        payment: encryptedPayment,
+        items,
+      } = createOrderSchema.parse(req.body);
+      let decryptedPayment = decryptData(encryptedPayment);
+      decryptedPayment = JSON.parse(decryptedPayment);
+      const payment = paymentSchema.parse(JSON.parse(decryptedPayment));
+      const order = await orderService.createOrder(
+        { customer, payment, items },
+        next
+      );
 
       res.status(201).json({
         success: true,

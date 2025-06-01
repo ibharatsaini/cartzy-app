@@ -1,4 +1,5 @@
 import { api, handleApiError } from "../lib/api";
+import { encryptData } from "../lib/crypto";
 import {
   ApiResponse,
   CustomerDetails,
@@ -15,9 +16,10 @@ export const orderApi = {
     transactionOutcome: TransactionOutcome
   ): Promise<ApiResponse<Order>> {
     try {
+      const  paymentDetail = await encryptData(JSON.stringify(paymentDetails))
       const { data } = await api.post<ApiResponse<Order>>("/orders", {
         customer: customerDetails,
-        payment: paymentDetails,
+        payment: paymentDetail,
         items,
         simulateOutcome: transactionOutcome,
       });

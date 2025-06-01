@@ -28,3 +28,4 @@ dist-ssr
 server/node_modules
 node_modules
 server/.env
+rsa
