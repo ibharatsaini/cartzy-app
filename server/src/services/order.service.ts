@@ -139,6 +139,22 @@ export const orderService = {
         })),
       });
 
+      //update inventory
+      await Promise.all([
+        ...validatedItems.map((item) =>
+          prisma.product.update({
+            where: {
+              id: item.productId,
+            },
+            data: {
+              inventory: {
+                decrement: item.quantity,
+              },
+            },
+          })
+        ),
+      ]);
+
       // Create payment record
       if (paymentResult.success) {
         await prisma.payment.create({
