@@ -19,6 +19,20 @@ const processPayment = async (
   payment: PaymentDetails,
   simulateOutcome: number
 ) => {
+  const [monthStr, yearStr] = payment.expiryDate.split("/");
+  const month = parseInt(monthStr, 10);
+  const year = parseInt(yearStr, 10) + 2000; // Convert '25' to 2025
+
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-indexed
+  const currentYear = now.getFullYear();
+
+  // Compare by year and month
+  const isValid =
+    year > currentYear || (year === currentYear && month - 1 > currentMonth);
+
+  if (!isValid) throw new AppError(400, "Card details are not valid.");
+
   switch (simulateOutcome) {
     case 2:
       return {

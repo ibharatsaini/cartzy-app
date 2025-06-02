@@ -7,7 +7,7 @@ import { decryptData } from "../utils/crypto";
 const customerSchema = z.object({
   fullName: z.string().min(3),
   email: z.string().email(),
-  phoneNumber: z.string().min(10),
+  phoneNumber: z.string().min(10).max(10),
   address: z.string().min(5),
   city: z.string().min(2),
   state: z.string().min(2),
