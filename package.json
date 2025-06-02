@@ -12,6 +12,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "prisma:generate": "npx prisma generate -w server",
     "dev:server": "npm run dev -w server",
     "build:server": "npm run build -w server",
     "start:server": "npm run start -w server"
