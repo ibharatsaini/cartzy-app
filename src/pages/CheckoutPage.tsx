@@ -29,13 +29,11 @@ const checkoutSchema = z.object({
   cardNumber: z
     .string()
     .regex(/^\d{16}$/, { message: "Card number must be 16 digits" }),
-  expiryDate: z
-    .string()
-    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, {
-      message: "Invalid expiry date (MM/YY)",
-    }),
+  expiryDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, {
+    message: "Invalid expiry date (MM/YY)",
+  }),
   cvv: z.string().regex(/^\d{3}$/, { message: "CVV must be 3 digits" }),
-  simulateOutcome: z.string().default("1"),
+  simulateOutcome: z.enum(["1", "2", "3"]).default("1"),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -43,14 +41,13 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const { cart, clearCart, total } = useCart();
-  const { setOrder } = useOrder();
+  const { setOrder, setPayment } = useOrder();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -67,6 +64,11 @@ const CheckoutPage: React.FC = () => {
 
   const onSubmit = async (data: CheckoutFormValues) => {
     setIsProcessing(true);
+    setPayment({
+      cardNumber: data.cardNumber,
+      expiryDate: data.expiryDate,
+      cvv: data.cvv,
+    });
 
     try {
       const customerDetails: CustomerDetails = {
@@ -89,6 +91,7 @@ const CheckoutPage: React.FC = () => {
         productId: item.product.id,
         variantId: item.variant.id,
         quantity: item.quantity,
+        price: item.variant.price,
       }));
 
       const transactionOutcome = parseInt(
@@ -102,26 +105,20 @@ const CheckoutPage: React.FC = () => {
         transactionOutcome
       );
 
-      if (orderResponse.success && orderResponse.data) {
-        console.log(orderResponse, `order`);
+      if (orderResponse.data) {
         setOrder(orderResponse.data);
         clearCart();
         navigate("/thank-you");
       } else {
-
-        if (orderResponse.data) {
-          setOrder(orderResponse.data);
-          navigate("/thank-you");
-        }
+        toast.error(orderResponse.error?.message || "Failed to process order");
       }
     } catch (error) {
+      toast.error("An unexpected error occurred");
       console.error("Checkout error:", error);
     } finally {
       setIsProcessing(false);
     }
   };
-
-  const transactionOutcome = watch("simulateOutcome");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -264,7 +261,6 @@ const CheckoutPage: React.FC = () => {
                         value="1"
                         {...register("simulateOutcome")}
                         className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={transactionOutcome === "1"}
                       />
                       <span className="ml-2 text-sm text-gray-700">
                         Approved

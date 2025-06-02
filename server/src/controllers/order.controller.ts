@@ -32,8 +32,13 @@ const createOrderSchema = z.object({
   // payment: paymentSchema,
   payment: z.string(),
   items: z.array(orderItemSchema).min(1),
+  simulateOutcome: z.number(),
 });
 
+const retryPaymentSchema = z.object({
+  payment: z.string(),
+  orderId: z.string(),
+});
 export const orderController = {
   async createOrder(req: Request, res: Response, next: NextFunction) {
     try {
@@ -42,12 +47,16 @@ export const orderController = {
         customer,
         payment: encryptedPayment,
         items,
+        simulateOutcome,
       } = createOrderSchema.parse(req.body);
+
       let decryptedPayment = decryptData(encryptedPayment);
       decryptedPayment = JSON.parse(decryptedPayment);
+
       const payment = paymentSchema.parse(JSON.parse(decryptedPayment));
+
       const order = await orderService.createOrder(
-        { customer, payment, items },
+        { customer, payment, items, simulateOutcome },
         next
       );
 
@@ -73,6 +82,26 @@ export const orderController = {
       res.json({
         success: true,
         data: order,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+  async retryPayment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { orderId, payment: encryptedPayment } = req.body;
+
+      retryPaymentSchema.parse(req.body);
+      let decryptedPayment = decryptData(encryptedPayment);
+      decryptedPayment = JSON.parse(decryptedPayment);
+
+      const paymentDetails = paymentSchema.parse(JSON.parse(decryptedPayment));
+
+      const payment = await orderService.retryPayment(orderId, paymentDetails);
+
+      res.json({
+        success: true,
+        data: payment,
       });
     } catch (err) {
       next(err);

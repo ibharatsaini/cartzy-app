@@ -1,10 +1,8 @@
 import axios, { AxiosError } from "axios";
 import { toast } from "react-toastify";
 import { ApiResponse } from "../types";
-import { encryptData } from "./crypto";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -43,7 +41,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 
 export const handleApiError = (
   error: unknown,

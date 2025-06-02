@@ -1,4 +1,4 @@
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, Payment, PaymentStatus, Prisma } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "./prismaClient";
 import { CreateOrderDTO, PaymentDetails } from "../types";
@@ -14,11 +14,30 @@ const generateOrderNumber = () => {
   return `ORD-${timestamp}-${random}`;
 };
 
-const processPayment = async (total: number, payment: PaymentDetails) => {
-  return {
-    success: true,
-    lastFour: payment.cardNumber.slice(-4),
-  };
+const processPayment = async (
+  total: number,
+  payment: PaymentDetails,
+  simulateOutcome: number
+) => {
+  switch (simulateOutcome) {
+    case 2:
+      return {
+        success: false,
+        error: `Transaction declined.`,
+        code: "TRANSACTION_DECLINED",
+      };
+    case 3:
+      return {
+        success: false,
+        error: "Gateway Failure",
+        code: "GATEWAY_FAILURE",
+      };
+    default:
+      return {
+        success: true,
+        lastFour: payment.cardNumber.slice(-4),
+      };
+  }
 };
 
 const validateOrderItems = async (items: CreateOrderDTO["items"]) => {
@@ -78,7 +97,7 @@ const calculateOrderTotals = (
 
 export const orderService = {
   async createOrder(orderData: CreateOrderDTO, next: NextFunction) {
-    const { customer, payment, items } = orderData;
+    const { customer, payment, items, simulateOutcome } = orderData;
 
     try {
       // Validate order items and get correct prices
@@ -89,7 +108,11 @@ export const orderService = {
         calculateOrderTotals(validatedItems);
 
       // Process payment
-      const paymentResult = await processPayment(total, payment);
+      const paymentResult = await processPayment(
+        total,
+        payment,
+        simulateOutcome
+      );
 
       // Create customer
       const customerRecord = await prisma.customer.create({
@@ -117,16 +140,44 @@ export const orderService = {
       });
 
       // Create payment record
-      await prisma.payment.create({
-        data: {
-          orderId: order.id,
-          total,
-          subtotal,
-          tax,
-          shipping,
-          lastFour: paymentResult.lastFour,
-        },
-      });
+      if (paymentResult.success) {
+        await prisma.payment.create({
+          data: {
+            orderId: order.id,
+            total,
+            subtotal,
+            tax,
+            shipping,
+            status: PaymentStatus.COMPLETED,
+            lastFour: paymentResult.lastFour!,
+          },
+        });
+      } else {
+        await prisma.payment.create({
+          data: {
+            orderId: order.id,
+            total,
+            subtotal,
+            tax,
+            shipping,
+            status: PaymentStatus.PENDING,
+          },
+        });
+        const orderStatus =
+          paymentResult.error == "TRANSACTION_DECLINED"
+            ? "DECLINED"
+            : paymentResult.error == "GATEWAY_FAILURE"
+            ? "ERROR"
+            : "PENDING";
+        await prisma.order.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            status: orderStatus,
+          },
+        });
+      }
 
       // Fetch complete order with all relations
       const completeOrder = await prisma.order.findUnique({
@@ -182,5 +233,59 @@ export const orderService = {
     }
 
     return order;
+  },
+
+  async retryPayment(orderId: string, paymentDetail: PaymentDetails) {
+    try {
+      const details = await prisma.payment.findUnique({
+        where: {
+          orderId,
+        },
+      });
+      if (!details)
+        throw new AppError(
+          404,
+          `Payment details not found.`,
+          "PAYMENT_NOT_FOUND"
+        );
+      const paymentResult = processPayment(details?.total, paymentDetail, 1);
+
+      const payment = await prisma.payment.update({
+        where: {
+          id: details.id,
+        },
+        data: {
+          status: PaymentStatus.COMPLETED,
+        },
+      });
+
+      if (!payment)
+        throw new AppError(
+          500,
+          "payment not completed.",
+          "PAYMENT_NOT_COMPLETED"
+        );
+      const completeOrder = await prisma.order.update({
+        where: {
+          id: orderId,
+        },
+        data: {
+          status: OrderStatus.APPROVED,
+        },
+        include: {
+          customer: true,
+          items: {
+            include: {
+              product: true,
+              variant: true,
+            },
+          },
+          payment: true,
+        },
+      });
+      return completeOrder;
+    } catch (err) {
+      throw err;
+    }
   },
 };

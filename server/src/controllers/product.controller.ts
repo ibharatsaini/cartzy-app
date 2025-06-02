@@ -11,8 +11,6 @@ export const productController = {
         },
       });
 
-
-
       res.json({
         success: true,
         data: products,

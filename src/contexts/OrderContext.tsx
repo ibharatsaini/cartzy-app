@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Order } from '../types';
+import { Order, PaymentDetails } from '../types';
 
 interface OrderContextType {
   order: Order | null;
+  payment: PaymentDetails | null,
   setOrder: (order: Order) => void;
+  setPayment: (payment:PaymentDetails)=> void;
   clearOrder: () => void;
 }
 
@@ -11,6 +13,7 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [order, setOrderState] = useState<Order | null>(null);
+  const [payment, setPayment] = useState<PaymentDetails | null>(null);
 
   const setOrder = (newOrder: Order) => {
     setOrderState(newOrder);
@@ -18,6 +21,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
   const clearOrder = () => {
     setOrderState(null);
+    setPayment(null)
   };
 
   return (
@@ -26,6 +30,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         order,
         setOrder,
         clearOrder,
+        payment,
+        setPayment
       }}
     >
       {children}

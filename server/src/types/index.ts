@@ -25,7 +25,6 @@ export interface CreateOrderDTO {
   customer: CustomerDetails;
   payment: PaymentDetails;
   items: OrderItem[];
+  simulateOutcome: number
 }
-
-
 
