@@ -3,11 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
+  "workspaces": [
+    ".",
+    "server"
+  ],
+   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:server": "npm run dev -w server",
+    "build:server": "npm run build -w server",
+    "start:server": "npm run start -w server"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

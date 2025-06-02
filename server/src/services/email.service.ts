@@ -271,8 +271,8 @@ const sendOrderEmail = async (
         htmlContent = getOrderProcessingTemplate(order);
         break;
       case "DECLINED":
-        subject = `Order Processing: #${order.orderNumber}`;
-        htmlContent = getOrderProcessingTemplate(order);
+        subject = `Order Declined: #${order.orderNumber}`;
+        htmlContent = getOrderIssueTemplate(order);
         break;
       case "ERROR":
         subject = `Important Update: Order #${order.orderNumber}`;

@@ -8,12 +8,25 @@ import { errorHandler } from "./middleware/errorHandler";
 
 dotenv.config();
 
+if (
+  !process.env.PORT ||
+  !process.env.DATABASE_URL ||
+  !process.env.PUBLIC_KEY ||
+  !process.env.PRIVATE_KEY ||
+  !process.env.SMTP_PORT ||
+  !process.env.SMRT_HOST ||
+  !process.env.SMTP_PASS ||
+  !process.env.SMTP_USER
+) {
+  throw Error(`Please provide all env variables.`);
+}
+
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173", // Vite's default port
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173" , // Vite's default port
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
