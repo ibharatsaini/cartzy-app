@@ -54,6 +54,7 @@ app.use("/api/public-key", (req, res) => {
 app.use(errorHandler);
 
 app.get("/health", (req, res) => {
+  console.log(req.headers)
   res.json({ status: "ok" });
 });
 
