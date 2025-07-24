@@ -53,7 +53,7 @@ app.use("/api/public-key", (req, res) => {
 //Error Handler
 app.use(errorHandler);
 
-app.get("/health", (req, res) => {
+app.post("/health", (req, res) => {
   console.log(req.headers)
   res.json({ status: "ok" });
 });
